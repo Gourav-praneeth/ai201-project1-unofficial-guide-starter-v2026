@@ -240,17 +240,83 @@ reviewed the numbers before keeping it.
 
      Milestone 1. -->
 
+Evidence file: `results/run_2026-11-09_1241_before.md`, produced by
+`run_eval.py::main` (retrieval by `store.py::search`, chunks from
+`chunker.py::split_documents`, cutoff 0.65, top-k 5, caching off). `scorer.py`
+does not exist yet, so I judged every answer myself by reading it. Three runs,
+no changes in between.
+
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks are complete thoughts, none under 100 characters | 4 of 5 sampled, 0 under 100 | 5/5, 0 | 5/5, 0 | 5/5, 0 | MET |
+| 5. Cited source is a chunk that contains the answer | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
-<!-- Underneath, paste the REAL output for each criterion from one of your
-     runs — the actual text your system produced, not a description of it.
-     Name the file and function that produced it. -->
+How I counted:
+- **1 and 5:** for each question I checked whether any of the top 5 retrieved
+  chunks contains its `expects` text (case-insensitive), and whether a file the
+  answer names is the source of such a chunk. Retrieval is deterministic, so
+  criterion 1 is the same in all three runs. Criterion 5 was checked on every
+  one of the 15 answers.
+- **2:** all 15 answers contain at least one `guide_*.md` filename.
+- **3:** one deterministic pass (5 of 5 refused), repeated in all three columns.
+- **4:** also deterministic. I checked all 84 chunks rather than a sample: none is
+  under 100 characters, and all end on sentence punctuation. The 5 chunks pasted
+  under Sample Chunks all read as complete thoughts.
+
+**Real output, criterion 1** (`python app.py retrieve`, produced by
+`store.py::search`). The weakest question. The chunk with the answer
+("Straightforward", Thornby Wells) is 4th:
+
+```
+Question: Which town in the region is the easiest to get around with limited mobility?
+
+#   distance   source                           preview
+1   0.5017     guide_accessibility.md           Getting around the region with limited mobility — Di...
+2   0.5349     guide_corry_vale.md              Corry Vale — Getting around  Nothing within the vall...
+3   0.5376     guide_corry_vale.md              Corry Vale — Getting there  Corry Vale is not a town...
+4   0.5408     guide_accessibility.md           Getting around the region with limited mobility — St...
+5   0.5541     guide_walking.md                 Walking in the region — Moderate, with hills  The **...
+
+Gate: best distance 0.502 is under the 0.65 cutoff
+```
+
+**Real output, criterion 2** (`generate.py::answer_from_chunks`, run 2, from the
+results file):
+
+```
+The Brightwater Tuesday market is finished by 1pm (Source: guide_brightwater.md and guide_eating.md).
+```
+
+**Real output, criterion 3** (`run_eval.py::check_out_of_scope`):
+
+```
+| Out-of-scope question | Best distance | Gate |
+|---|---|---|
+| What is the capital of Mongolia? | 0.854 | refused |
+| How do I change the oil in a diesel engine? | 0.901 | refused |
+| Who won the 1994 World Cup? | 1.002 | refused |
+| What is the recommended dosage of ibuprofen for a headache? | 0.835 | refused |
+| How do I write a for loop in Rust? | 0.858 | refused |
+```
+
+**Real output, criterion 4** (`chunker.py::describe`, called by `app.py index`):
+
+```
+84 chunks, 354 characters on average (shortest 188, longest 883), produced by chunker.py::split_documents
+```
+
+**Real output, criterion 5** (`generate.py::answer_from_chunks`, run 1, from the
+results file; the answer cites `guide_accessibility.md`, whose retrieved chunk
+at rank 4 contains "Thornby Wells"):
+
+```
+Thornby Wells is the easiest town in the region to get around with limited mobility because it is flat, compact, and everything is within three minutes of everything else. 
+
+This information comes from `guide_accessibility.md`.
+```
 
 ## Verdicts
 
