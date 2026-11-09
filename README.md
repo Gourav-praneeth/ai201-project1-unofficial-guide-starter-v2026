@@ -211,9 +211,9 @@ reasons, and its criterion 3 reason named example words ("lighthouse", "bus",
 "dosage") that had nothing to do with my out-of-scope questions. I had it redo
 those: criterion 4 now has a 100-character floor tied to the 24-character chunk
 the starter produced, and criterion 5 checks that the cited source is a chunk
-that really contains the answer. Claude also suggested the retrieval cutoff
-based on measured distances, but I picked 0.65 myself after seeing the gap
-between 0.502 and 0.835.
+that really contains the answer. For the retrieval cutoff, Claude
+measured the distances and chose 0.65 from the gap between 0.502 and 0.835; I
+reviewed the numbers before keeping it.
 
 <!-- ── Stretch features ─────────────────────────────────────────────────────
      Doing one? Say so here BEFORE you start. A feature this README never
