@@ -23,8 +23,12 @@ For at least 4 of my 5 test questions, the retrieved chunks include one that
 contains the answer.
 
 **Why this target:**
-<!-- e.g. "One of my questions is about a topic only two documents mention, so
-     I expect that one to be hard." -->
+Four of five leaves room for one miss without calling the system broken. My
+corpus is 14 short guides, and a question like the Elder Ness flood count lives
+in a single sentence inside the walking guide, which a chunk boundary could
+easily split. Five of five would punish one unlucky split; three of five would
+let retrieval fail on most of what I ask.
+
 
 ---
 
@@ -33,8 +37,12 @@ contains the answer.
 Every answer the system produces names at least one source document.
 
 **Why this target:**
-<!-- Why all five and not four? What about your setup makes that achievable —
-     or what would have to go wrong for it not to be? -->
+All of them, because attribution is a property of the pipeline, not of the
+question: the prompt and the output format ask for the source file every time.
+If one answer comes back without a source, that is a bug to fix, not noise to
+tolerate. It could only fail if the model ignores the format or the answer is a
+refusal, and refusals are covered by criterion 3.
+
 
 ---
 
@@ -50,8 +58,13 @@ in at least 4 of 5 tries.
      just keep five of them, or the "4 of 5" above has nothing to be 4 of. -->
 
 **Why this target:**
-<!-- What did your distances look like when you set the cutoff in Milestone 4?
-     Was there a clean gap, or did the two groups overlap? -->
+Four of five, not five, because the out-of-scope questions share some words
+with the guides in vocabulary (a question about "oil" or "loops" could still
+land near a walking or transport chunk), which can pull a distance under the
+cutoff. My in-corpus best distance was 0.341 against a
+cutoff of 0.6 (to be tuned in Milestone 4); I expect a gap but have not yet
+measured the out-of-scope side, so I will not promise a clean 5 of 5.
+
 
 ---
 
@@ -71,9 +84,17 @@ in at least 4 of 5 tries.
 
 
 
+At least 4 of 5 randomly sampled chunks (from `python app.py chunks`) read as a
+complete thought, with no sentence cut in half at either end, and no chunk is
+shorter than 100 characters.
+
 **Why this target:**
-
-
+My guides are short (about 350-450 words) and organised under `##` headings, so
+a chunk that stops mid-sentence is a visible defect, not a judgement call. The
+first index produced a 24-character chunk, so the 100-character floor is
+something the current chunking demonstrably fails. 4 of 5 rather than 5 of 5
+because sampling five chunks by eye is a small sample and one oddly cut chunk
+should not sink a working splitter.
 
 ---
 
@@ -89,9 +110,17 @@ in at least 4 of 5 tries.
 
 
 
+For all 5 test questions, the source file the answer names is one of the
+retrieved chunks that contains the `expects` text, not just any retrieved file.
+
 **Why this target:**
-
-
+Criterion 2 only checks that a source is named, and I care that it is the right
+one. In my first test the answer cited `guide_eating.md` correctly, but the
+retrieved list also included `guide_regional_transport.md`, which has nothing to
+do with the question, so a name being present proves little. All 5 rather than
+4 because the same fact often appears in two guides (a town guide and a
+cross-cutting one), so a correct citation should be easy to get; a wrong one
+means the model is naming files it didn't use.
 
 ---
 
