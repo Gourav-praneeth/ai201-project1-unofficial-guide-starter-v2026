@@ -215,6 +215,26 @@ that really contains the answer. For the retrieval cutoff, Claude
 measured the distances and chose 0.65 from the gap between 0.502 and 0.835; I
 reviewed the numbers before keeping it.
 
+**Unit 2 additions.**
+
+**3. Finding the pattern in the run results.** After the before run, Claude
+scored the answers: it wrote a script that checked, for every question, whether
+any top-5 chunk contained my `expects` text and whether the file each answer
+cited was the source of such a chunk. All five passed, but the same output showed
+the Thornby Wells answer chunk ranked 4th behind two Corry Vale chunks. Claude
+drafted the diagnosis that all my criteria test whether an answer is reachable
+and none tests whether it is ranked well. The pattern came from the model; what I
+checked is that its numbers matched the run log, and the Diagnoses section
+says plainly that nothing was missed instead of inventing a failure.
+
+**4. Building the hybrid search.** The diagnosis pointed at retrieval, so Claude
+added BM25 alongside the vector search in `store.py::search`, fused by reciprocal
+rank behind a single `config.HYBRID` flag. It kept each result's cosine distance
+rather than a fused score, because the 0.65 relevance cutoff was set against
+cosine numbers. After the first run I did not take it on trust: the rank table
+shows the change helped one question (rank 4 to 2) and also let in two
+off-topic chunks, and the README reports both.
+
 <!-- ── Stretch features ─────────────────────────────────────────────────────
      Doing one? Say so here BEFORE you start. A feature this README never
      claims earns nothing.
@@ -464,17 +484,54 @@ call it a real but modest gain, not a proven one.
 
 ## What's Still Broken
 
-<!-- For each criterion still missed after your fix: what you'd do about it,
-     and why you stopped where you did.
+No criterion is missed: all five are MET in both the before and after runs. That
+does not mean nothing is left. These are the real gaps, in the order I would fix
+them:
 
-     "I ran out of time" is fine if it's true. Pretending nothing is left is
-     not.
-
-     Milestone 5. -->
+- **Near-miss questions are refused by the prompt, not the gate.** "Does Halden
+  Bay have any vegetarian restaurants?" has a best distance of 0.319, far under
+  the 0.65 cutoff, so the gate lets it through and only the grounding instruction
+  stops a made-up answer. Criterion 3 only uses far-off questions (0.835 and up)
+  so it cannot see this. I'd add five near-miss questions to `OUT_OF_SCOPE` and
+  require them to be refused. I stopped because the gate is a single distance
+  number, and no cutoff separates 0.319 (a refusal) from 0.289 (the bus question,
+  which is answerable). A fix needs a second check on the answer, not a new
+  threshold, and that is more than one change.
+- **The weakest retrieval is only partly fixed.** Hybrid search moved the
+  Thornby Wells answer chunk from rank 4 to rank 2, but a chunk about the wrong
+  topic is still ranked above it, and the fix added noise elsewhere (a Walking
+  chunk for the bus question, a Halden Bay chunk for the Thornby Wells question).
+  I'd try a weighted fusion or a small top-k with a reranker. I stopped because
+  with five questions I cannot tell a real gain from luck, and tuning weights on
+  five questions would overfit them.
+- **Attribution is checked loosely.** Criteria 2 and 5 pass if any cited file
+  holds the answer, and the model cites two files on most questions. I'd require
+  the first-named file to hold it. I did not build that check because there is
+  no `scorer.py` yet.
+- **"Half" vs "double".** The Fell Street answer says "roughly half the price"
+  while the guide says "roughly double". They agree, but a literal match on the
+  `expects` text would fail it. It will matter once a scorer exists.
+- **Only five questions, all about single facts.** None asks for a comparison
+  across towns or a list, which is where section-sized chunks would most likely
+  break. I ran out of time to write those, not because they were unnecessary.
 
 ## What I'd Do Differently
 
-<!-- Knowing what you know now — which of your five criteria would you write
-     differently, and why?
+I'd write the criteria harder and more specifically.
+- **Criterion 1** said "the retrieved chunks" without a count, and 4 of 5 was
+  met with room to spare. I'd write "the top 3 chunks contain the answer, 5 of
+  5", which the original system would have missed on the Thornby Wells question.
+  That would have given me a real failure to diagnose.
+- **Criterion 3** should have included near-miss questions from the start. Five
+  questions from a different world (Mongolia, Rust) were never going to be
+  close to the cutoff, so the target was safe by construction.
+- **Criterion 5** should have said "the first file named", and I'd have written
+  it as a check someone else could run without having to interpret "is one of the
+  retrieved chunks".
+- **Criterion 4** mixed a judgement ("reads as a complete thought") with a
+  number. I'd keep only the countable part (no chunk under 100 characters, none
+  ending mid-sentence).
 
-     Milestone 5. -->
+Four of my five targets were set where the system was always going to pass. A
+target I might miss teaches more than one I can't.
+
