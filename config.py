@@ -35,6 +35,10 @@ CHUNK_OVERLAP = 120     # characters shared between neighbouring chunks
 
 TOP_K = 5               # how many chunks to pull back per question
 
+# Unit 2 improvement: fuse the meaning ranking with a BM25 keyword ranking.
+# Set to False to get the original meaning-only retrieval back.
+HYBRID = os.getenv("AI201_HYBRID", "1") != "0"
+
 # The relevance gate. If the best chunk is further away than this, the system
 # refuses to answer instead of handing the model thin material.
 #

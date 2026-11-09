@@ -18,6 +18,7 @@ rest of the project if they were wrong:
 """
 
 import os
+import re
 import shutil
 from dataclasses import dataclass
 
@@ -45,6 +46,8 @@ class Result:
 
 
 _model = None
+
+RRF_K = 60   # reciprocal rank fusion constant: bigger flattens the rank bonus
 
 # The model Chroma bundles. Anything else in config.EMBEDDING_MODEL means
 # "fetch that one from Hugging Face instead" — see `_embedder`.
@@ -178,18 +181,36 @@ def build_index(
     return len(chunks)
 
 
+_TOKEN = re.compile(r"\w+")
+_STOPWORDS = {
+    "a", "an", "and", "are", "at", "by", "do", "does", "for", "how", "in", "is",
+    "it", "of", "on", "or", "the", "to", "what", "when", "where", "which", "who",
+    "with",
+}
+
+
+def _tokens(text: str) -> list[str]:
+    return [t for t in _TOKEN.findall(text.lower()) if t not in _STOPWORDS]
+
+
 def search(
     question: str,
     top_k: int | None = None,
     corpus: str | None = None,
     variant: str = "default",
+    hybrid: bool | None = None,
 ) -> list[Result]:
     """
     Retrieve the chunks closest in meaning to a question.
 
-    Returns them nearest-first, each with its distance.
+    Returns them best-first, each with its cosine distance. With `hybrid` on
+    (the default, see config.HYBRID) the order comes from fusing the meaning
+    ranking with a BM25 keyword ranking by reciprocal rank. `distance` is
+    always the cosine distance, never a fused score, so the relevance gate
+    means the same thing either way.
     """
     top_k = top_k or config.TOP_K
+    hybrid = config.HYBRID if hybrid is None else hybrid
     name = config.collection_name(corpus, variant)
 
     try:
@@ -199,9 +220,10 @@ def search(
             f"No index called '{name}'. Run `python app.py index` first."
         ) from exc
 
+    count = collection.count()
     raw = collection.query(
         query_embeddings=embed([question]),
-        n_results=min(top_k, collection.count()),
+        n_results=count if hybrid else min(top_k, count),
     )
 
     results: list[Result] = []
@@ -217,7 +239,26 @@ def search(
                 produced_by=str(meta.get("produced_by", "unknown")),
             )
         )
-    return results
+
+    if not hybrid:
+        return results
+
+    # `results` is every chunk, nearest first: that is the meaning ranking.
+    from rank_bm25 import BM25Okapi
+
+    bm25 = BM25Okapi([_tokens(r.text) for r in results])
+    scores = bm25.get_scores(_tokens(question))
+    keyword_order = sorted(
+        (i for i in range(len(results)) if scores[i] > 0),
+        key=lambda i: -scores[i],
+    )
+
+    fused = [1.0 / (RRF_K + rank) for rank in range(1, len(results) + 1)]
+    for rank, i in enumerate(keyword_order, 1):
+        fused[i] += 1.0 / (RRF_K + rank)
+
+    best_first = sorted(range(len(results)), key=lambda i: -fused[i])
+    return [results[i] for i in best_first[:top_k]]
 
 
 def index_exists(corpus: str | None = None, variant: str = "default") -> bool:

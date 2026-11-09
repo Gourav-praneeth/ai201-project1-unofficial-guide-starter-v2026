@@ -390,34 +390,77 @@ The pattern is that my targets measured whether an answer was *reachable*
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** hybrid search. `store.py::search` now ranks every chunk by
+meaning (cosine distance, as before) and by BM25 keyword score
+(`rank-bm25`, with a small stopword list), then fuses the two rankings by
+reciprocal rank (constant 60) and returns the top 5. A chunk with a BM25 score of
+zero gets no keyword credit. `distance` on each result is still the cosine
+distance, so the 0.65 relevance cutoff means exactly what it did before. It is
+switched on by `config.HYBRID` (set `AI201_HYBRID=0` to get the old behaviour).
+Nothing else changed: same chunks, same index, same prompt, same top-k.
 
-**Why I picked it:**
+**Why I picked it:** my diagnosis found that the Thornby Wells question passed
+only because its answer chunk ranked 4th, behind two Corry Vale chunks that share
+the words "getting around" but are about a village with no transport. The answer
+chunk says "Thornby Wells is the easiest town in the region", which uses the
+question's own words "easiest" and "town", and keyword search matches exactly
+that.
 
-<!-- Connect it to a specific diagnosis above in one sentence. If you can't,
-     you picked a fix because it sounded impressive. -->
+### Run Log — Before
 
-### Run Log — After
-
-<!-- Same format, same five criteria, three runs each.
-     `python run_eval.py --label after` -->
+Evidence file: `results/run_2026-11-09_1241_before.md` (meaning-only retrieval,
+`config.HYBRID` off). The table is the same one as in the Run Log above.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks complete, none under 100 characters | 4 of 5 sampled, 0 under 100 | 5/5, 0 | 5/5, 0 | 5/5, 0 | MET |
+| 5. Cited source holds the answer | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
-**Did it help?**
+### Run Log — After
 
-<!-- Say plainly whether it did, and how you know. If it made things worse,
-     say that — a change that backfired, honestly reported, earns full credit
-     and is more interesting than one that worked. What matters is that you can
-     tell.
+Evidence file: `results/run_2026-11-09_1248_after.md`, produced by
+`run_eval.py::main` with hybrid retrieval on. Same five questions, same cutoff,
+three runs, caching off. I scored it the same way as before (script check of the
+top 5 for the `expects` text and the cited files, plus reading the answers).
 
-     Milestone 4. -->
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks complete, none under 100 characters | 4 of 5 sampled, 0 under 100 | 5/5, 0 | 5/5, 0 | 5/5, 0 | MET |
+| 5. Cited source holds the answer | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+
+**Did it help?** Only a little, and the criteria can't show it. All five
+criteria were already met, so they read the same before and after. What moved is
+the position of the answer inside the top 5, which I measured separately with
+`search(..., hybrid=False)` against `hybrid=True` on the same index:
+
+| Question | Rank of first chunk with the answer, before | after |
+|---|---|---|
+| Fell Street | 1 | 1 |
+| Halden Bay bus | 1 | 1 |
+| Elder Ness flood | 1 | 1 |
+| Thornby Wells (limited mobility) | **4** | **2** |
+| Brightwater market | 1 | 1 |
+| Answer in the top 3 | 4 of 5 | **5 of 5** |
+
+So the change did what the diagnosis said: the weak question went from 4th to
+2nd, and the stricter "top 3, 5 of 5" version of criterion 1 that I proposed in
+the diagnosis now holds where it would have missed before. Nothing got worse on
+the five criteria.
+
+It also cost something. Keyword matches pull in chunks that share a word but
+not the topic: the bus question's top 5 now includes a Walking chunk, and the
+Thornby Wells question's top 5 ends with a Halden Bay chunk. The relevance gate
+is unaffected (out-of-scope still refuses 5 of 5, distances unchanged), because
+the gate reads the cosine distance and the cosine-best chunk is still returned.
+The answers themselves were the same facts as before in all 15 runs. With one
+question improving and five questions total, this is a small sample, so I would
+call it a real but modest gain, not a proven one.
 
 ## What's Still Broken
 
