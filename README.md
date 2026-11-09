@@ -29,18 +29,33 @@
 
 ## Chunking Strategy
 
-**Chunk size:**
-**Overlap:**
+**Chunk size:** one chunk per `##` section; no fixed character count. Sections under 150 characters are merged into the next one, and sections over 1,000 are split on paragraph breaks. Result: 84 chunks from 14 guides, 354 characters on average (shortest 188, longest 883).
+**Overlap:** none (0).
 
-<!-- What about YOUR documents made you pick these numbers? Short posts and
-     long sectioned guides don't want the same chunking, and "800 seemed
-     reasonable" earns nothing. Point at something you noticed when you read
-     the documents in Milestone 1.
+I picked these after reading the guides in Milestone 1. Each is about 350-450
+words under `##` headings such as "Eat and drink" and "Getting there", and each
+section is one self-contained topic. The starter's 800-character windows cut
+straight through those sections (51 chunks, shortest 24 characters, with a
+sentence like "Everything closes by 9pm" landing in a chunk that no longer said
+which town it was about). The facts I test for are one sentence inside a
+section, so keeping the section whole keeps the sentence next to its context.
 
-     If you changed your mind partway through, say so and say why. That's worth
-     more than pretending you got it right first time.
+There is no overlap because a section never continues into the next. The cut
+points are already topic boundaries, so there is nothing to carry across them.
+Overlap would only repeat text and make neighbouring chunks match the same
+question.
 
-     Milestone 3. -->
+Each chunk is prefixed with "<guide title> — <section heading>", for example
+"Halden Bay — Eat and drink". Many sections never name their town ("Prices on
+the harbour front are roughly double..."), so without the prefix the chunk
+cannot say what it is about.
+
+I changed my mind once. My first version made the intro paragraph before the
+first heading its own chunk. The Halden Bay one came out at 188 characters and
+said only that it is a fishing port, which answers nothing. Intros are now
+joined to the first section.
+
+Chunks are produced by `chunker.py::split_documents`.
 
 ## Sample Chunks
 
@@ -53,29 +68,63 @@
 
      Milestone 3. -->
 
-**Chunk 1** — source: `` — produced by: ``
+**Chunk 1** — source: `guide_accessibility.md` — produced by: `chunker.py::split_documents`
 
 ```
+Getting around the region with limited mobility — Practical
+
+The nearest full hospital is in Marchwood. Brightwater has a hospital;
+Kestrelford, Halden Bay, Corry Vale, Givens Mill and Elder Ness have minor
+injuries units with limited hours or nothing at all.
+
+Mobile coverage is good in the town centres and patchy on the outskirts, and
+genuinely absent in parts of Corry Vale.
 ```
 
-**Chunk 2** — source: `` — produced by: ``
+**Chunk 2** — source: `guide_eating.md` — produced by: `chunker.py::split_documents`
 
 ```
+Eating across the region — Markets
+
+Kestrelford's Saturday market has run since the 1400s and is the region's best,
+though much reduced from November to February. Brightwater's Tuesday market
+sets up at 7am in the square and is finished by 1pm. Marchwood's covered market
+has operated since 1863, runs six days a week, and is at its best on a weekday
+morning.
 ```
 
-**Chunk 3** — source: `` — produced by: ``
+**Chunk 3** — source: `guide_halden_bay.md` — produced by: `chunker.py::split_documents`
 
 ```
+Halden Bay — Where to stay
+
+Almost entirely holiday lets rather than hotels, which means minimum stays of two or three nights in summer. There is one inn on the harbour. Prices roughly halve outside July and August.
 ```
 
-**Chunk 4** — source: `` — produced by: ``
+**Chunk 4** — source: `guide_pellew_sands.md` — produced by: `chunker.py::split_documents`
 
 ```
+Pellew Sands — Eat and drink
+
+The seafront is chips and ice cream, done well and without pretence. The better cooking is on Marine Terrace, one street back, where four or five places are genuinely good and roughly half the seafront price. Sunday evening is difficult — most kitchens close.
 ```
 
-**Chunk 5** — source: `` — produced by: ``
+**Chunk 5** — source: `guide_walking.md` — produced by: `chunker.py::split_documents`
 
 ```
+Walking in the region — Easy, on good surfaces
+
+The **Brightwater river path** runs four miles upstream from the town to a weir,
+on a made surface, flat throughout. It is the most-walked route in the region
+and deservedly so. Continuing downstream from Givens Mill reaches Brightwater in
+about three hours.
+
+The **Kestrelford trackbed** follows the railway line closed in 1963 for six
+miles to the next village. Easy gradient, good surface, and the best walking in
+the region for the effort involved.
+
+**Thornby Wells** has flat, formal gardens and level streets — the region's
+most accessible town on foot.
 ```
 
 ## Sample Answer

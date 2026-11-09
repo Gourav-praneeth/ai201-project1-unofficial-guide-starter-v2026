@@ -80,24 +80,93 @@ def fallback_split(
     return chunks
 
 
+# Section-aware chunking for the city_guides corpus. Every guide is a short
+# markdown file (~2,000 characters) divided by `## ` headings, and each section
+# is a self-contained topic (e.g. "Eat and drink", "Getting there"). So the
+# section is the chunk. No overlap: a section never continues into the next one,
+# so there is no half-thought to carry across a boundary.
+MIN_CHUNK = 150    # a section shorter than this is joined to the one after it
+MAX_CHUNK = 1000   # a section longer than this is split on paragraph breaks
+
+
+def _sections(text: str) -> tuple[str, list[tuple[str, str]]]:
+    """Return (document title, [(heading, body), ...]) from one markdown guide."""
+    title = ""
+    sections: list[tuple[str, list[str]]] = [("", [])]
+    for line in text.split("\n"):
+        if line.startswith("## "):
+            sections.append((line[3:].strip(), []))
+        elif line.startswith("# ") and not title:
+            title = line[2:].strip()
+        else:
+            sections[-1][1].append(line)
+    return title, [(h, "\n".join(body).strip()) for h, body in sections]
+
+
+def _split_long(body: str) -> list[str]:
+    """Pack paragraphs into pieces of at most MAX_CHUNK characters."""
+    pieces: list[str] = []
+    current = ""
+    for para in body.split("\n\n"):
+        if current and len(current) + len(para) + 2 > MAX_CHUNK:
+            pieces.append(current)
+            current = para
+        else:
+            current = f"{current}\n\n{para}" if current else para
+    if current:
+        pieces.append(current)
+    return pieces
+
+
 def split_documents(documents: list[Document]) -> list[Chunk]:
     """
-    Split documents into chunks. ⚠️ REPLACE THE BODY OF THIS IN MILESTONE 3.
+    Split each guide into one chunk per `##` section.
 
-    Right now it just calls the fallback. That is the plain, generic behaviour
-    the brief is talking about.
-
-    When you write your own strategy, set `produced_by` to
-    "chunker.py::split_documents" so your README's Sample Chunks section names
-    the right function. `app.py chunks` prints that string for you.
-
-    Things worth thinking about before you write any code:
-      - Are your documents short posts or long guides?
-      - Is the useful information in one sentence, or spread over a paragraph?
-      - Would splitting on paragraph breaks keep more thoughts intact than
-        splitting on a character count?
+    Each chunk starts with "<guide title> — <section heading>" so it still says
+    which town and topic it is about once it is separated from its document
+    (without that, "Everything closes by 9pm" doesn't say where). Sections under
+    MIN_CHUNK characters are merged into the next section; sections over
+    MAX_CHUNK are split on paragraph breaks, repeating the heading line. A guide's
+    intro paragraph (before its first heading) is joined to the first section.
     """
-    return fallback_split(documents)
+    chunks: list[Chunk] = []
+    for doc in documents:
+        title, sections = _sections(doc.text)
+
+        # (heading, body) pairs, with too-short sections carried into the next.
+        merged: list[tuple[str, str]] = []
+        carry_heading, carry_body = "", ""
+        for heading, body in sections:
+            if not body and not carry_body:
+                continue  # the empty text before the first heading
+            heading = f"{carry_heading} / {heading}" if carry_heading and heading else (heading or carry_heading)
+            body = f"{carry_body}\n\n{body}".strip() if carry_body else body
+            if len(body) < MIN_CHUNK or not heading:
+                carry_heading, carry_body = heading, body
+            else:
+                merged.append((heading, body))
+                carry_heading, carry_body = "", ""
+        if carry_body:  # a short final section: attach to the previous chunk
+            if merged:
+                h, b = merged[-1]
+                merged[-1] = (h, f"{b}\n\n{carry_body}")
+            else:
+                merged.append((carry_heading, carry_body))
+
+        index = 0
+        for heading, body in merged:
+            label = f"{title} — {heading}" if heading else title
+            for piece in _split_long(body):
+                chunks.append(
+                    Chunk(
+                        text=f"{label}\n\n{piece}",
+                        source=doc.source,
+                        index=index,
+                        produced_by="chunker.py::split_documents",
+                    )
+                )
+                index += 1
+    return chunks
 
 
 def describe(chunks: list[Chunk]) -> str:
