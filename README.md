@@ -331,11 +331,15 @@ This information comes from `guide_accessibility.md`.
 
 | # | Criterion | Verdict | How I decided |
 |---|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
+| 1 | Retrieved chunk contains the answer (4 of 5) | MET | 5/5 in all three runs, above the 4 of 5 target. Retrieval is deterministic, so the three runs can't differ. The closest call was the limited-mobility question: its answer chunk ranked 4th (distance 0.541), so it passed only because top-k is 5; at 3 it would be 4/5, still a pass. |
+| 2 | Every answer names a source (5 of 5) | MET | All 15 answers (5 questions × 3 runs) contain a `guide_*.md` filename. The target was every answer, and none was missing one. The format varied (backticks, brackets, a "Source:" line) but a filename was always there. |
+| 3 | Gate stops out-of-corpus questions (4 of 5) | MET | 5/5 refused. The nearest call was ibuprofen at 0.835, which is 0.185 above the 0.65 cutoff, so this was not close. It is one deterministic pass, so there is no run-to-run variation to worry about. |
+| 4 | Chunks are complete thoughts, none under 100 characters (4 of 5 sampled) | MET | Checked all 84 chunks, not a sample: shortest is 188 characters, and every chunk ends on sentence punctuation. The five I read for Sample Chunks all stood alone. "Complete thought" is partly a judgement, so the numeric floor carries most of the weight; the closest chunk to the floor is 188, nearly double it. |
+| 5 | Cited source is a chunk that contains the answer (5 of 5) | MET | 15 of 15 answers name at least one file that is the source of a top-5 chunk containing the `expects` text. Because the same fact often sits in two guides, a model citing either one passes; I did not check whether it cited the one that is the best source. |
+
+Two of the criteria (1 and 5) were ambiguous when I scored them, so I added a
+revision under each original line in `criteria.md`. The targets did not change,
+and none of the five was missed, so no target was lowered.
 
 ## Diagnoses
 

@@ -29,6 +29,15 @@ in a single sentence inside the walking guide, which a chunk boundary could
 easily split. Five of five would punish one unlucky split; three of five would
 let retrieval fail on most of what I ask.
 
+> **Revised in unit 2:** For at least 4 of my 5 test questions, at least one of
+> the top 5 retrieved chunks contains the `expects` text from `questions.py`
+> (case-insensitive).
+>
+> **Why revised:** "the retrieved chunks" did not say how many, and "contains the
+> answer" had no check behind it. When I scored the before run I had to choose
+> top 5 and the `expects` string myself. The target (4 of 5) is unchanged, and
+> this revision was written after the run had come out 5/5, so it changes how the
+> count is made, not how hard it is.
 
 ---
 
@@ -121,6 +130,15 @@ do with the question, so a name being present proves little. All 5 rather than
 4 because the same fact often appears in two guides (a town guide and a
 cross-cutting one), so a correct citation should be easy to get; a wrong one
 means the model is naming files it didn't use.
+
+> **Revised in unit 2:** For all 5 test questions, a file named in the answer is
+> the source of at least one top-5 retrieved chunk that contains the `expects`
+> text.
+>
+> **Why revised:** the original said the cited "source file ... is one of the
+> retrieved chunks", but a file is not a chunk, so a stranger could not tell what
+> to compare. The target (all 5) is unchanged, and I scored the before run with
+> this reading.
 
 ---
 
