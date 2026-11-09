@@ -343,23 +343,50 @@ and none of the five was missed, so no target was lowered.
 
 ## Diagnoses
 
-<!-- For each miss: which stage caused it, and how. The stage alone isn't
-     enough — you need the mechanism.
+I missed nothing: all five criteria were met in all three runs, so there is no
+failure to diagnose by stage. A system that clears everything on the first try
+usually means the criteria were safe, so I looked for where my targets were set
+low. These are the weak spots the run log does show:
 
-     Not a diagnosis: "Question 3 didn't work."
-     A diagnosis:     "Question 3 asks about laundry costs. The answer is in
-                       one sentence that got split across two chunks, so
-                       neither chunk on its own contains it."
+- **Criterion 1 hid a weak retrieval.** The limited-mobility question
+  (Thornby Wells) passed, but only just. Its answer chunk ("Straightforward") was
+  ranked 4th at distance 0.541, behind two Corry Vale chunks ("Getting around",
+  "Getting there") that match the question's words but are about a village with
+  no transport. This is a retrieval-stage problem: the question says "easiest to
+  get around", the answer chunk lists towns by name, and the embedding scores the
+  wording match higher than the meaning match. The other four questions had their
+  answer in the top-ranked chunk. At top-k 3 the score would have been 4/5; at
+  top-k 1 it would have been 4/5 as well. A target of "4 of 5 in the top 5" could
+  not see this.
+- **Criterion 3 only tested easy refusals.** My out-of-scope questions (Mongolia,
+  diesel engines, a Rust loop) had best distances of 0.835 to 1.002, far from the
+  0.65 cutoff. The harder case is a question about this region that the guides
+  don't answer. In Milestone 4 I tried one: "Does Halden Bay have any vegetarian
+  restaurants?" got a best distance of 0.319, so the gate let it through, and it
+  was only the grounding prompt that produced the refusal. The gate did not
+  catch it, and criterion 3 as written would never have shown that.
+- **Criteria 2 and 5 are weaker than they look.** Many facts sit in two guides
+  (a town guide and a cross-cutting one), so any citation of either file passes.
+  The model also cited both files for nearly every answer, and I did not check
+  that the file it listed first was the best source.
+- **Wording drift.** The Fell Street answer says "roughly half the price" while
+  the guide says the harbour front is "roughly double". They agree, but a scorer
+  that looks for a literal "double" would mark it wrong. This is a generation-stage
+  paraphrase, and it will matter once the scorer exists.
 
-     The five stages: loading → chunking → embedding → retrieval → generation.
+The pattern is that my targets measured whether an answer was *reachable*
+(top 5, any cited file, far-away refusals), not whether the system picked the
+*best* one. That is one problem, not four.
 
-     Look for a pattern. If three misses all ask about numbers, that's one
-     problem, not three.
-
-     Missed nothing? Say so, then say honestly whether your targets were set
-     low, and which one you'd tighten and to what.
-
-     Milestone 3. -->
+**What I would tighten:**
+1. **Criterion 1:** from "top 5 contain the answer, 4 of 5" to "the top 3 contain
+   the answer, 5 of 5". My own run would still pass at 4 of 5 for the top 3 and
+   miss at 5 of 5, which is the honest score for the Thornby Wells question.
+2. **Criterion 3:** add five near-miss questions about the region that the
+   guides don't answer (vegetarian restaurants, hotel prices, and so on) and
+   require the system, gate or prompt, to refuse at least 4 of those 5.
+3. **Criterion 5:** require that the first file the answer names is a source of a
+   chunk containing the answer, not merely any of them.
 
 ## The Improvement
 
