@@ -1,6 +1,6 @@
 # The Unofficial Guide
 
-<!-- Replace this line with your name and which corpus you picked. -->
+Gourav Bhimavarapu — corpus: `city_guides`
 
 > **This file is your submission.** Fill it in as you go — most sections get
 > written during the milestone that produces them, not at the end.
@@ -21,11 +21,14 @@
 
 ## What This Does
 
-<!-- Three or four sentences. Which corpus you picked, and the kinds of
-     questions your system answers. Write it for someone who has never seen
-     this repo.
-
-     Milestone 5. -->
+The Unofficial Guide answers questions about a fictional region of nine towns
+(Brightwater, Halden Bay, Kestrelford and others), using 14 travel guides: one
+per town plus five that cut across them (eating, seasons, walking, transport,
+accessibility). It answers specific practical questions, such as which street
+has cheaper food, how often a bus runs, or which walks flood at high tide. Each
+answer is built only from the retrieved guide sections and names the file it
+came from. When the guides don't cover a question, a relevance check refuses it
+before the model is called.
 
 ## Chunking Strategy
 
@@ -190,18 +193,27 @@ name the file, and neither near-miss drifted past the sources.
 
 ## How I Used AI
 
-<!-- Two specific moments. For each: what you asked for, what came back, and
-     what you changed about it.
+**1. Chunking the guides.** I described the guides to Claude (short files
+split by `##` headings, one topic per section) and asked it to replace
+`split_documents` with a section-based chunker. It wrote one chunk per section,
+prefixed with the guide title and heading, merging short sections and splitting
+long ones. When I printed chunks to read them, one was just the Halden Bay intro
+paragraph on its own: 188 characters saying only that it is a fishing port,
+which answers no question. I had Claude change the code so an intro is joined to
+the first section, which brought the corpus from 93 chunks to 84. The overlap
+decision was mine: I kept it at zero because section boundaries are already
+topic boundaries.
 
-     "I asked Claude to write the chunking function from my notes. It ignored
-     the overlap, so I added that myself" is the level of detail we're after.
-     "I used AI to help me code" is not.
-
-     Milestone 5. -->
-
-**1.**
-
-**2.**
+**2. Writing the acceptance criteria.** I asked Claude to fill in the "why this
+target" sentences and write criteria 4 and 5 in `criteria.md`. Its first pass
+put the text of criteria 4 and 5 under the "Why this target" heading and left no
+reasons, and its criterion 3 reason named example words ("lighthouse", "bus",
+"dosage") that had nothing to do with my out-of-scope questions. I had it redo
+those: criterion 4 now has a 100-character floor tied to the 24-character chunk
+the starter produced, and criterion 5 checks that the cited source is a chunk
+that really contains the answer. Claude also suggested the retrieval cutoff
+based on measured distances, but I picked 0.65 myself after seeing the gap
+between 0.502 and 0.835.
 
 <!-- ── Stretch features ─────────────────────────────────────────────────────
      Doing one? Say so here BEFORE you start. A feature this README never
