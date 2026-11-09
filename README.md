@@ -132,27 +132,61 @@ most accessible town on foot.
 <!-- One complete question and answer, pasted as text, with the source line
      visible. Milestone 4. -->
 
-**Question:**
+**Question:** Which street in Halden Bay has cheaper food than the harbour front?
 
 **Answer:**
 
 ```
+Fell Street has food that is roughly half the price of the harbour front for comparable food.
+
+Sources: `guide_halden_bay.md` and `guide_eating.md`
+
+(best distance 0.214, cutoff 0.65)
+Sources retrieved: guide_eating.md, guide_halden_bay.md
 ```
 
-**My relevance cutoff:**
+**My relevance cutoff:** 0.65 (changed from the starter's 0.6).
 
-<!-- The number you set in config.py, and how you got there.
+The two groups did not overlap. The five questions my corpus covers had best
+distances from 0.214 to 0.502. The five out-of-scope questions ran from 0.835 to
+1.002. The gap is 0.502 to 0.835, and the midpoint is about 0.67. I put the
+cutoff at 0.65, a little under the midpoint, because my test questions are
+specific and phrased close to the text, while a real visitor's question will be
+looser and land further from its chunk. The weakest covered question (limited
+mobility, 0.502) shows that: it is worded generally, and its answer chunk was
+ranked 4th. The old 0.6 would also have worked on these ten, but it leaves
+less room for loosely worded questions.
 
-     You ran five questions your corpus covers and the five in OUT_OF_SCOPE
-     that it clearly doesn't, and wrote down the best distance for each. What
-     did those two groups look like? Where was the gap? Put the actual numbers
-     here — the table below wants all ten rows.
+Top-k stays at 5. For the limited-mobility question the chunk that holds the
+answer ("Straightforward": Thornby Wells) ranked 4th, behind Corry Vale chunks
+that only share the words "getting around". At k=3 it would never have come back.
 
-     Milestone 4. -->
+The gate only separates questions from a different world. Two near-miss
+questions pass it, since they are about this region but ask for things the
+guides don't say:
+
+- "Does Halden Bay have any vegetarian restaurants?" (0.319). The model
+  answered "I do not have enough information", so the prompt caught it.
+- "How much does a hotel room cost in Marchwood?" (0.459). The model said the
+  amounts are not given and quoted only the document's "cheap" outside
+  conference weeks, citing `guide_marchwood.md`.
+
+I read `GROUNDING_INSTRUCTION` in `generate.py` and left it unchanged. It
+already says to use only the documents, to refuse rather than guess, and to
+name the file, and neither near-miss drifted past the sources.
 
 | Question | In corpus? | Best distance |
 |---|---|---|
-|  |  |  |
+| Which street in Halden Bay has cheaper food than the harbour front? | Yes | 0.214 |
+| What time is the Brightwater Tuesday market finished by? | Yes | 0.248 |
+| How many times a day does the Halden Bay coast bus service run? | Yes | 0.289 |
+| How many times a year does the access road to the Elder Ness headland flood? | Yes | 0.289 |
+| Which town in the region is the easiest to get around with limited mobility? | Yes | 0.502 |
+| What is the recommended dosage of ibuprofen for a headache? | No | 0.835 |
+| What is the capital of Mongolia? | No | 0.854 |
+| How do I write a for loop in Rust? | No | 0.858 |
+| How do I change the oil in a diesel engine? | No | 0.901 |
+| Who won the 1994 World Cup? | No | 1.002 |
 
 ## How I Used AI
 
